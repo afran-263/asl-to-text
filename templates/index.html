@@ -1,0 +1,462 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ASL Translator</title>
+    <style>
+        body {
+            font-family: 'Courier New', monospace;
+            text-align: center;
+            background-color: #0a0a0a;
+            color: #00ff00;
+            margin: 0;
+            padding: 20px;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            border: 1px solid #00ff00;
+            box-shadow: 0 0 10px #00ff00;
+        }
+        h1 {
+            margin-bottom: 20px;
+            color: #00ff00;
+            text-shadow: 0 0 5px #00ff00;
+        }
+        h2 {
+            margin-top: 30px;
+            color: #00ff00;
+        }
+        .tab-container {
+            display: flex;
+            justify-content: center;
+            margin-bottom: 20px;
+        }
+        .tab {
+            background-color: #111;
+            padding: 10px 20px;
+            cursor: pointer;
+            border-radius: 5px 5px 0 0;
+            margin: 0 5px;
+            border: 1px solid #00ff00;
+            border-bottom: none;
+            color: #00ff00;
+        }
+        .tab.active {
+            background-color: #222;
+            color: #00ff00;
+            font-weight: bold;
+            box-shadow: 0 0 5px #00ff00;
+        }
+        .content {
+            border: 1px solid #00ff00;
+            padding: 20px;
+            border-radius: 0 0 5px 5px;
+            background-color: #111;
+        }
+        .section {
+            display: none;
+        }
+        .section.active {
+            display: block;
+        }
+        video {
+            border: 2px solid #00ff00;
+            width: 100%;
+            max-width: 640px;
+            height: auto;
+            margin-bottom: 20px;
+            box-shadow: 0 0 15px #00ff00;
+        }
+        input, button {
+            padding: 10px;
+            font-size: 16px;
+            margin: 10px;
+            border-radius: 5px;
+            font-family: 'Courier New', monospace;
+        }
+        input[type="text"] {
+            width: 60%;
+            border: 1px solid #00ff00;
+            background-color: #000;
+            color: #00ff00;
+        }
+        #predictionResult {
+            text-align: center;
+            border: 2px solid #00ff00;
+            background-color: #000;
+            color: #00ff00;
+            font-size: 18px;
+            box-shadow: 0 0 8px #00ff00;
+        }
+        .btn {
+            background-color: #111;
+            color: #00ff00;
+            border: 1px solid #00ff00;
+            cursor: pointer;
+            padding: 10px 20px;
+            box-shadow: 0 0 5px #00ff00;
+            transition: all 0.3s ease;
+        }
+        .btn:hover {
+            background-color: #222;
+            box-shadow: 0 0 10px #00ff00;
+        }
+        #status {
+            margin-top: 20px;
+            font-size: 18px;
+            color: #00ff00;
+            display: none;
+            text-shadow: 0 0 5px #00ff00;
+        }
+        .camera-container {
+            margin: 20px auto;
+        }
+        ::placeholder {
+            color: #00aa00;
+            opacity: 0.7;
+        }
+        #textDisplay {
+            background-color: #000;
+            border: 2px solid #00ff00;
+            color: #00ff00;
+            font-family: 'Courier New', monospace;
+            padding: 15px;
+            margin: 20px auto;
+            width: 90%;
+            min-height: 200px;
+            text-align: left;
+            overflow-y: auto;
+            box-shadow: 0 0 8px #00ff00;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
+        .text-controls {
+            display: flex;
+            justify-content: center;
+            margin-top: 15px;
+        }
+        .text-sentence {
+            margin-bottom: 10px;
+            padding: 5px;
+            border-bottom: 1px dotted #00ff00;
+        }
+        #currentWord {
+            display: inline-block;
+            margin-top: 10px;
+            padding: 5px;
+            color: #ffff00;
+            font-size: 16px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>&lt;ASL to Text Translator&gt;</h1>
+        
+        <div class="tab-container">
+            <div class="tab active" onclick="switchTab('predict')">Predict Signs</div>
+            <div class="tab" onclick="switchTab('collect')">Collect Data</div>
+            <div class="tab" onclick="switchTab('text')">Text</div>
+        </div>
+        
+        <div class="content">
+            <!-- Predict Section -->
+            <div id="predict-section" class="section active">
+                <h2>&gt; ASL Prediction</h2>
+                <div class="camera-container">
+                    <video id="video" autoplay playsinline></video>
+                    <input type="text" id="predictionResult" placeholder="Predicted Sign" readonly>
+                    <div id="currentWord">Current sentence: <span id="currentSentenceDisplay"></span></div>
+                </div>
+                <button class="btn" onclick="toggleCamera()">Start/Stop Camera</button>
+                <button class="btn" onclick="finishSentence()">Finish Sentence</button>
+            </div>
+            
+            <!-- Collect Data Section -->
+            <div id="collect-section" class="section">
+                <h2>&gt; Data Collection</h2>
+                <div class="data-input">
+                    <input type="text" id="labelInput" placeholder="Enter label (e.g., A, B, Hello)">
+                    <button class="btn" onclick="sendLabel()">Collect</button>
+                </div>
+                <p id="status">Starting data collection...</p>
+                <div>
+                    <button class="btn" onclick="trainModel()">Train Model</button>
+                </div>
+            </div>
+            
+            <!-- Text Display Section -->
+            <div id="text-section" class="section">
+                <h2>&gt; Generated Text</h2>
+                <div id="textDisplay"></div>
+                <div class="text-controls">
+                    <button class="btn" onclick="clearText()">Clear Text</button>
+                    <button class="btn" onclick="copyText()">Copy Text</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let cameraActive = false;
+        let captureInterval = null;
+        let currentSentence = "";
+        let lastPrediction = "";
+        let sentences = [];
+        let predictionTimestamp = 0;
+        let lastDisplayedPrediction = "";
+        
+        // Switch between tabs
+        function switchTab(tabName) {
+            // Deactivate all tabs and sections
+            document.querySelectorAll('.tab').forEach(tab => tab.classList.remove('active'));
+            document.querySelectorAll('.section').forEach(section => section.classList.remove('active'));
+            
+            // Activate the selected tab and section
+            if (tabName === 'predict') {
+                document.querySelector('.tab:nth-child(1)').classList.add('active');
+                document.getElementById('predict-section').classList.add('active');
+                document.getElementById('currentSentenceDisplay').textContent = currentSentence;
+            } else if (tabName === 'collect') {
+                document.querySelector('.tab:nth-child(2)').classList.add('active');
+                document.getElementById('collect-section').classList.add('active');
+            } else if (tabName === 'text') {
+                document.querySelector('.tab:nth-child(3)').classList.add('active');
+                document.getElementById('text-section').classList.add('active');
+                updateTextDisplay();
+            }
+        }
+
+        // Toggle camera on/off
+        async function toggleCamera() {
+           const video = document.getElementById('video');
+            
+            if (cameraActive) {
+                // Stop the camera
+                const stream = video.srcObject;
+                const tracks = stream.getTracks();
+                tracks.forEach(track => track.stop());
+                video.srcObject = null;
+                cameraActive = false;
+                
+                // Clear the interval
+                if (captureInterval) {
+                    clearInterval(captureInterval);
+                    captureInterval = null;
+                }
+                
+                document.getElementById('predictionResult').value = "";
+            } else {
+                // Start the camera
+                try {
+                    const stream = await navigator.mediaDevices.getUserMedia({ 
+                        video: { facingMode: "user", width: 640, height: 480 } 
+                    });
+                    video.srcObject = stream;
+                    cameraActive = true;
+                    
+                    // Set up interval for frame capture
+                    captureInterval = setInterval(captureFrame, 2000); // Every 2 seconds
+                } catch (error) {
+                    alert("Error accessing webcam: " + error.message);
+                    console.error("Error accessing webcam:", error);
+                }
+            }
+        }
+
+        // Capture frame for prediction
+        async function captureFrame() {
+            const video = document.getElementById('video');
+            if (!video.srcObject) return;
+            
+            const canvas = document.createElement('canvas');
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+            canvas.toBlob(async (blob) => {
+                const formData = new FormData();
+                formData.append("image", blob, "frame.jpg");
+
+                try {
+                    const response = await fetch('/predict_sign', { method: 'POST', body: formData });
+                    const data = await response.json();
+
+                    if (data.prediction && data.prediction !== "No hand detected") {
+                        const currentTime = Date.now();
+                        const newPrediction = data.prediction;
+                        
+                        document.getElementById('predictionResult').value = newPrediction;
+                        
+                        // Check if this is a new hand shape (different from the last prediction)
+                        if (newPrediction !== lastPrediction && newPrediction !== "No hand detected") {
+                            // Add to sentence automatically
+                            addPredictionToSentence(newPrediction);
+                            lastPrediction = newPrediction;
+                            predictionTimestamp = currentTime;
+                        } else if (currentTime - predictionTimestamp > 3000 && newPrediction !== lastDisplayedPrediction) {
+                            // If the same shape has been held for 3+ seconds but it's different from what we've added
+                            addPredictionToSentence(newPrediction);
+                            predictionTimestamp = currentTime;
+                        }
+                        
+                    } else {
+                        document.getElementById('predictionResult').value = data.prediction || "No hand detected";
+                    }
+                } catch (error) {
+                    console.error("Error predicting sign:", error);
+                    document.getElementById('predictionResult').value = "Error predicting";
+                }
+            }, 'image/jpeg');
+        }
+
+        // Add prediction to sentence automatically
+        function addPredictionToSentence(prediction) {
+            if (prediction && prediction !== "No hand detected" && prediction !== "Error predicting") {
+                if (currentSentence === "") {
+                    currentSentence = prediction;
+                } else {
+                    currentSentence += " " + prediction;
+                }
+                
+                // Update the display
+                document.getElementById('currentSentenceDisplay').textContent = currentSentence;
+                lastDisplayedPrediction = prediction;
+            }
+        }
+
+        // Finish current sentence and add to sentences array
+        function finishSentence() {
+            if (currentSentence.trim() !== "") {
+                // Capitalize first letter and add period
+                const formattedSentence = currentSentence.charAt(0).toUpperCase() + 
+                                         currentSentence.slice(1) + ".";
+                sentences.push(formattedSentence);
+                currentSentence = "";
+                document.getElementById('currentSentenceDisplay').textContent = "";
+                lastDisplayedPrediction = "";
+                
+                // Update the text display if it's visible
+                if (document.getElementById('text-section').classList.contains('active')) {
+                    updateTextDisplay();
+                }
+            }
+        }
+
+        // Update the text display
+        function updateTextDisplay() {
+            const textDisplay = document.getElementById('textDisplay');
+            textDisplay.innerHTML = "";
+            
+            // Add all completed sentences
+            sentences.forEach((sentence, index) => {
+                const sentenceElement = document.createElement('div');
+                sentenceElement.className = 'text-sentence';
+                sentenceElement.textContent = sentence;
+                textDisplay.appendChild(sentenceElement);
+            });
+            
+            // Add the current sentence (if any)
+            if (currentSentence.trim() !== "") {
+                const currentElement = document.createElement('div');
+                currentElement.className = 'text-sentence';
+                currentElement.textContent = currentSentence;
+                textDisplay.appendChild(currentElement);
+            }
+        }
+
+        // Clear all text
+        function clearText() {
+            sentences = [];
+            currentSentence = "";
+            document.getElementById('currentSentenceDisplay').textContent = "";
+            updateTextDisplay();
+        }
+
+        // Copy text to clipboard
+        function copyText() {
+            const textToCopy = sentences.join(' ') + (currentSentence ? ' ' + currentSentence : '');
+            
+            if (textToCopy.trim() === "") {
+                alert("No text to copy!");
+                return;
+            }
+            
+            navigator.clipboard.writeText(textToCopy)
+                .then(() => {
+                    alert("Text copied to clipboard!");
+                })
+                .catch(err => {
+                    console.error("Failed to copy text: ", err);
+                    alert("Failed to copy text. Please try again.");
+                });
+        }
+
+        // Send label for data collection
+        function sendLabel() {
+            let label = document.getElementById("labelInput").value;
+            let statusText = document.getElementById("status");
+
+            if (label.trim() === "") {
+                alert("Please enter a label!");
+                return;
+            }
+
+            // Show loading message
+            statusText.style.display = "block";
+            statusText.innerText = "Starting data collection...";
+
+            fetch("http://127.0.0.1:5000/collect", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({ label: label })
+            })
+            .then(response => response.json())
+            .then(data => {
+                statusText.innerText = data.message; // Show response message
+            })
+            .catch(error => {
+                statusText.innerText = "Error starting data collection!";
+                console.error("Error:", error);
+            });
+        }
+
+        // Train the model
+        function trainModel() {
+            let statusText = document.getElementById("status");
+            statusText.style.display = "block";
+            statusText.innerText = "Model training started! This may take several minutes.";
+    
+            fetch('/train', { method: 'POST' })
+                .then(response => response.json())
+                .then(data => {
+                    statusText.innerText = data.message;
+                    checkTrainingStatus();
+                })
+                .catch(error => {
+                    statusText.innerText = "Error training model!";
+                    console.error("Error:", error);
+                });
+        }
+    
+        function checkTrainingStatus() {
+            fetch('/train_status')
+                .then(response => response.json())
+                .then(data => {
+                    document.getElementById("status").innerText = data.status;
+                    if (data.status.includes("completed")) {
+                        return;
+                    }
+                    setTimeout(checkTrainingStatus, 5000); // Check every 5 seconds
+                })
+                .catch(error => console.error("Error checking training status:", error));
+        }
+    </script>
+</body>
+</html>
